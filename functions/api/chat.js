@@ -74,9 +74,18 @@ export async function onRequestPost({ request, env }) {
 
     return Response.json({ reply: result.response });
   } catch (error) {
+    console.error("Harmai AI error:", error);
+
+    const detail =
+      error instanceof Error
+        ? error.message
+        : String(error);
+
     return Response.json(
-      { error: "Gagal memproses pesan AI. Periksa konfigurasi dan log Cloudflare." },
+      {
+        error: "Gagal memproses pesan AI.",
+        detail: detail.slice(0, 500),
+      },
       { status: 500 }
     );
   }
-}
