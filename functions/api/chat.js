@@ -42,7 +42,7 @@ export async function onRequestPost({ request, env }) {
       }));
 
     if (
-      !messages.length ||
+      messages.length === 0 ||
       messages[messages.length - 1].role !== "user"
     ) {
       return Response.json(
@@ -68,45 +68,35 @@ export async function onRequestPost({ request, env }) {
       }
     );
 
-const reply =
-  typeof result?.response === "string"
-    ? result.response
-    : typeof result?.choices?.[0]?.message?.content === "string"
-      ? result.choices[0].message.content
-      : null;
+    // Ambil jawaban dari format respons Workers AI.
+    const reply =
+      typeof result?.response === "string"
+        ? result.response
+        : typeof result?.choices?.[0]?.message?.content === "string"
+          ? result.choices[0].message.content
+          : null;
 
-if (!reply) {
-  console.error("Harmai AI response:", result);
-
-  return Response.json(
-    { error: "AI belum menghasilkan jawaban." },
-    { status: 502 }
-  );
-}
-
-return Response.json({ reply });
+    if (!reply || !reply.trim()) {
+      console.error("Harmai AI tidak menghasilkan teks jawaban.");
 
       return Response.json(
-        {
-          error: "AI belum menghasilkan jawaban.",
-          result: result ?? null,
-        },
+        { error: "AI belum menghasilkan jawaban." },
         { status: 502 }
       );
     }
 
-    return Response.json({ reply: result.response });
+    // Kirim teks jawaban saja, bukan data internal model.
+    return Response.json({
+      reply: reply.trim(),
+    });
   } catch (error) {
-    console.error("Harmai AI error:", error);
+    console.error(
+      "Harmai AI error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
 
     return Response.json(
-      {
-        error: "Gagal memproses pesan AI.",
-        detail:
-          error instanceof Error
-            ? error.message.slice(0, 500)
-            : String(error).slice(0, 500),
-      },
+      { error: "Gagal memproses pesan AI. Coba lagi nanti." },
       { status: 500 }
     );
   }
