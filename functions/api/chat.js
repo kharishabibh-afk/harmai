@@ -20,7 +20,7 @@ export async function onRequestPost({ request, env }) {
         ? body.personality.slice(0, 500)
         : "Ramah, hangat, dan natural.";
 
-    if (!Array.isArray(body.messages) || body.messages.length === 0) {
+    if (!Array.isArray(body.messages) || !body.messages.length) {
       return Response.json(
         { error: "Pesan belum tersedia." },
         { status: 400 }
@@ -29,20 +29,20 @@ export async function onRequestPost({ request, env }) {
 
     const messages = body.messages
       .filter(
-        (message) =>
-          message &&
-          ["user", "assistant"].includes(message.role) &&
-          typeof message.content === "string" &&
-          message.content.trim().length > 0
+        (m) =>
+          m &&
+          ["user", "assistant"].includes(m.role) &&
+          typeof m.content === "string" &&
+          m.content.trim()
       )
       .slice(-10)
-      .map((message) => ({
-        role: message.role,
-        content: message.content.slice(0, 2000),
+      .map((m) => ({
+        role: m.role,
+        content: m.content.slice(0, 2000),
       }));
 
     if (
-      messages.length === 0 ||
+      !messages.length ||
       messages[messages.length - 1].role !== "user"
     ) {
       return Response.json(
@@ -59,16 +59,15 @@ export async function onRequestPost({ request, env }) {
             role: "system",
             content:
               `Namamu ${characterName}. Kepribadianmu: ${personality}. ` +
-              "Jawab dalam bahasa yang digunakan pengguna. " +
-              "Bersikaplah natural, hangat, dan konsisten dengan karaktermu. " +
-              "Jangan mengaku memiliki ingatan atau pengalaman yang tidak diberikan kepadamu.",
+              "Jawab menggunakan bahasa pengguna. " +
+              "Bersikap natural, hangat, dan konsisten dengan karakter. " +
+              "Jangan mengaku memiliki ingatan yang tidak diberikan.",
           },
           ...messages,
         ],
       }
     );
 
-    // Ambil jawaban dari format respons Workers AI.
     const reply =
       typeof result?.response === "string"
         ? result.response
@@ -77,18 +76,13 @@ export async function onRequestPost({ request, env }) {
           : null;
 
     if (!reply || !reply.trim()) {
-      console.error("Harmai AI tidak menghasilkan teks jawaban.");
-
       return Response.json(
-        { error: "AI belum menghasilkan jawaban." },
+        { error: "AI tidak menghasilkan teks jawaban." },
         { status: 502 }
       );
     }
 
-    // Kirim teks jawaban saja, bukan data internal model.
-    return Response.json({
-      reply: reply.trim(),
-    });
+    return Response.json({ reply: reply.trim() });
   } catch (error) {
     console.error(
       "Harmai AI error:",
