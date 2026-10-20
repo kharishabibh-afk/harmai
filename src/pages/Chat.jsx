@@ -1,18 +1,80 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../styles/chat.css";
 
-export default function Chat({ data, onOpenMemory, onEditProfile }) {
-  const [messages, setMessages] = useState([
+function getStorageKey(data) {
+  // Pisahkan percakapan tiap karakter.
+  const character = (data.characterName || "Harmai")
+    .trim()
+    .toLowerCase();
+
+  return `harmai_chat_${character}`;
+}
+
+function getInitialMessages(data) {
+  return [
     {
       role: "character",
       text: `Hai, ${data.userName || "kamu"} ✨ Senang akhirnya kita bisa ngobrol. Kamu lagi apa hari ini?`,
     },
-  ]);
+  ];
+}
+
+function loadMessages(key, data) {
+  try {
+    const saved = localStorage.getItem(key);
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      if (
+        Array.isArray(parsed) &&
+        parsed.every(
+          (message) =>
+            message &&
+            ["user", "character"].includes(message.role) &&
+            typeof message.text === "string"
+        )
+      ) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.error("Gagal membaca riwayat chat:", error);
+  }
+
+  return getInitialMessages(data);
+}
+
+export default function Chat({ data, onOpenMemory, onEditProfile }) {
+  const storageKey = getStorageKey(data);
+
+  const [messages, setMessages] = useState(() =>
+    loadMessages(storageKey, data)
+  );
 
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const messagesEndRef = useRef(null);
+
+  // Simpan semua pesan setiap kali percakapan berubah.
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch (error) {
+      console.error("Gagal menyimpan riwayat chat:", error);
+    }
+  }, [messages, storageKey]);
+
+  // Gulir otomatis ke pesan terbaru.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages, isLoading]);
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -21,13 +83,13 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
 
     if (!text || isLoading) return;
 
-    const userMessage = {
-      role: "user",
-      text,
-    };
-
-    // Tampilkan pesan pengguna langsung di chat.
-    const updatedMessages = [...messages, userMessage];
+    const updatedMessages = [
+      ...messages,
+      {
+        role: "user",
+        text,
+      },
+    ];
 
     setMessages(updatedMessages);
     setDraft("");
@@ -35,13 +97,7 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
     setIsLoading(true);
 
     try {
-      // Ubah format pesan untuk API AI.
       const apiMessages = updatedMessages
-        .filter(
-          (message) =>
-            ["user", "character"].includes(message.role) &&
-            typeof message.text === "string"
-        )
         .slice(-10)
         .map((message) => ({
           role: message.role === "user" ? "user" : "assistant",
@@ -73,7 +129,6 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
         throw new Error("AI belum memberikan jawaban.");
       }
 
-      // Tampilkan balasan AI.
       setMessages((previous) => [
         ...previous,
         {
@@ -88,7 +143,7 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
         ...previous,
         {
           role: "character",
-          text: "Maaf ya, aku lagi kesulitan membalas pesanmu. 🥹 Coba kirim pesan lagi, yuk.",
+          text: "Maaf ya, aku sedang kesulitan membalas pesanmu. Coba kirim pesan lagi, yuk.",
         },
       ]);
     } finally {
@@ -156,6 +211,8 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
             </div>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
 
         {messages.length === 1 && !isLoading && (
           <div className="chat-hint">
