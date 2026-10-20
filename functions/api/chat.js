@@ -65,12 +65,15 @@ export async function onRequestPost({ request, env }) {
       }
     );
 
-    if (!result || typeof result.response !== "string") {
-      return Response.json(
-        { error: "AI belum menghasilkan jawaban." },
-        { status: 502 }
-      );
-    }
+  if (!result || typeof result.response !== "string") {
+  return Response.json(
+    {
+      error: "AI belum menghasilkan jawaban.",
+      result: result ?? null,
+    },
+    { status: 502 }
+  );
+}
 
     return Response.json({ reply: result.response });
   } catch (error) {
