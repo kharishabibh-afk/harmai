@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 import "../styles/chat.css";
 
 function getStorageKey(data) {
-  // Pisahkan percakapan tiap karakter.
   const character = (data.characterName || "Harmai")
     .trim()
     .toLowerCase();
@@ -46,7 +45,27 @@ function loadMessages(key, data) {
   return getInitialMessages(data);
 }
 
-export default function Chat({ data, onOpenMemory, onEditProfile }) {
+const menuItemStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  width: "100%",
+  padding: "12px 10px",
+  border: 0,
+  borderRadius: 8,
+  background: "transparent",
+  color: "#282536",
+  fontSize: 14,
+  textAlign: "left",
+  cursor: "pointer",
+};
+
+export default function Chat({
+  data,
+  onOpenMemory,
+  onEditProfile,
+  onOpenPersonalization,
+}) {
   const storageKey = getStorageKey(data);
 
   const [messages, setMessages] = useState(() =>
@@ -55,11 +74,12 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
 
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
 
-  // Simpan semua pesan setiap kali percakapan berubah.
+  // Simpan riwayat chat ke browser.
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(messages));
@@ -94,6 +114,7 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
     setMessages(updatedMessages);
     setDraft("");
     setMenuOpen(false);
+    setHeaderMenuOpen(false);
     setIsLoading(true);
 
     try {
@@ -103,6 +124,8 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
           role: message.role === "user" ? "user" : "assistant",
           content: message.text,
         }));
+
+      const personalization = data.personalization || {};
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -116,6 +139,7 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
             data.characterPersonality ||
             "Ramah, hangat, santai, natural, dan suka menemani pengguna ngobrol.",
           messages: apiMessages,
+          personalization,
         }),
       });
 
@@ -168,14 +192,59 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
           </div>
         </div>
 
-        <button
-          className="header-icon"
-          onClick={onEditProfile}
-          aria-label="Edit profile"
-          title="Edit profile"
-        >
-          ⋯
-        </button>
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="header-icon"
+            onClick={() => setHeaderMenuOpen((open) => !open)}
+            aria-label="Open settings menu"
+            aria-expanded={headerMenuOpen}
+            title="Pengaturan"
+          >
+            ⋯
+          </button>
+
+          {headerMenuOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                right: 0,
+                width: 220,
+                background: "#fff",
+                border: "1px solid #e8e6ef",
+                borderRadius: 14,
+                padding: 8,
+                boxShadow: "0 8px 28px rgba(0,0,0,0.10)",
+                zIndex: 20,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setHeaderMenuOpen(false);
+                  onEditProfile();
+                }}
+                style={menuItemStyle}
+              >
+                <span>👤</span>
+                <span>Profil pengguna</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setHeaderMenuOpen(false);
+                  onOpenPersonalization();
+                }}
+                style={menuItemStyle}
+              >
+                <span>⚙️</span>
+                <span>Personalization</span>
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <section className="chat-messages">
@@ -225,6 +294,7 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
         {menuOpen && (
           <div className="plus-popover">
             <button
+              type="button"
               onClick={() => {
                 setMenuOpen(false);
                 onOpenMemory();

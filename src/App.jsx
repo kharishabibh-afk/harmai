@@ -6,6 +6,7 @@ import Character from "./pages/Character";
 import UserProfile from "./pages/UserProfile";
 import Chat from "./pages/Chat";
 import MemoryBook from "./pages/MemoryBook";
+import Personalization from "./pages/Personalization";
 
 const STORAGE_KEY = "harmai_app_state";
 
@@ -15,6 +16,12 @@ const initialData = {
   personality: "",
   userName: "",
   userGender: "",
+  personalization: {
+    responseStyle: "casual",
+    responseLength: "balanced",
+    allowMemory: false,
+    restrictedTopics: "",
+  },
 };
 
 function loadSavedState() {
@@ -26,7 +33,14 @@ function loadSavedState() {
 
       return {
         page: parsed.page || "login",
-        data: { ...initialData, ...(parsed.data || {}) },
+        data: {
+          ...initialData,
+          ...(parsed.data || {}),
+          personalization: {
+            ...initialData.personalization,
+            ...(parsed.data?.personalization || {}),
+          },
+        },
       };
     }
   } catch (error) {
@@ -41,11 +55,9 @@ function loadSavedState() {
 
 export default function App() {
   const [savedState] = useState(loadSavedState);
-
   const [page, setPage] = useState(savedState.page);
   const [data, setData] = useState(savedState.data);
 
-  // Simpan halaman terakhir dan data pengguna.
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -57,21 +69,12 @@ export default function App() {
     }
   }, [page, data]);
 
-  // Dukungan tombol Back dan Forward browser.
   useEffect(() => {
     window.history.replaceState({ page }, "", window.location.href);
 
-    function handlePopState() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setPage(parsed.page || "login");
-          setData({ ...initialData, ...(parsed.data || {}) });
-        } catch (error) {
-          console.error("Gagal memulihkan halaman:", error);
-        }
+    function handlePopState(event) {
+      if (event.state?.page) {
+        setPage(event.state.page);
       }
     }
 
@@ -117,6 +120,17 @@ export default function App() {
         data={data}
         onOpenMemory={() => navigate("memory")}
         onEditProfile={() => navigate("profile")}
+        onOpenPersonalization={() => navigate("personalization")}
+      />
+    );
+  }
+
+  if (page === "personalization") {
+    return (
+      <Personalization
+        data={data}
+        setData={setData}
+        onBack={() => navigate("chat")}
       />
     );
   }
