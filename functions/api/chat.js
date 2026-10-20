@@ -41,7 +41,10 @@ export async function onRequestPost({ request, env }) {
         content: message.content.slice(0, 2000),
       }));
 
-    if (!messages.length || messages[messages.length - 1].role !== "user") {
+    if (
+      !messages.length ||
+      messages[messages.length - 1].role !== "user"
+    ) {
       return Response.json(
         { error: "Pesan pengguna tidak valid." },
         { status: 400 }
@@ -65,30 +68,31 @@ export async function onRequestPost({ request, env }) {
       }
     );
 
-  if (!result || typeof result.response !== "string") {
-  return Response.json(
-    {
-      error: "AI belum menghasilkan jawaban.",
-      result: result ?? null,
-    },
-    { status: 502 }
-  );
-}
+    if (!result || typeof result.response !== "string") {
+      console.error("Harmai AI response:", result);
+
+      return Response.json(
+        {
+          error: "AI belum menghasilkan jawaban.",
+          result: result ?? null,
+        },
+        { status: 502 }
+      );
+    }
 
     return Response.json({ reply: result.response });
   } catch (error) {
     console.error("Harmai AI error:", error);
 
-    const detail =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
     return Response.json(
       {
         error: "Gagal memproses pesan AI.",
-        detail: detail.slice(0, 500),
+        detail:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : String(error).slice(0, 500),
       },
       { status: 500 }
     );
   }
+}
