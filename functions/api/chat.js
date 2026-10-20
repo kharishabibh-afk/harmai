@@ -68,8 +68,23 @@ export async function onRequestPost({ request, env }) {
       }
     );
 
-    if (!result || typeof result.response !== "string") {
-      console.error("Harmai AI response:", result);
+const reply =
+  typeof result?.response === "string"
+    ? result.response
+    : typeof result?.choices?.[0]?.message?.content === "string"
+      ? result.choices[0].message.content
+      : null;
+
+if (!reply) {
+  console.error("Harmai AI response:", result);
+
+  return Response.json(
+    { error: "AI belum menghasilkan jawaban." },
+    { status: 502 }
+  );
+}
+
+return Response.json({ reply });
 
       return Response.json(
         {
