@@ -9,20 +9,91 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
       text: `Hai, ${data.userName || "kamu"} ✨ Senang akhirnya kita bisa ngobrol. Kamu lagi apa hari ini?`,
     },
   ]);
+
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  function sendMessage(event) {
+  async function sendMessage(event) {
     event.preventDefault();
+
     const text = draft.trim();
 
-    if (!text) return;
+    if (!text || isLoading) return;
 
-    setMessages((previous) => [
-      ...previous,
-      { role: "user", text },
-    ]);
+    const userMessage = {
+      role: "user",
+      text,
+    };
+
+    // Tampilkan pesan pengguna langsung di chat.
+    const updatedMessages = [...messages, userMessage];
+
+    setMessages(updatedMessages);
     setDraft("");
+    setMenuOpen(false);
+    setIsLoading(true);
+
+    try {
+      // Ubah format pesan untuk API AI.
+      const apiMessages = updatedMessages
+        .filter(
+          (message) =>
+            ["user", "character"].includes(message.role) &&
+            typeof message.text === "string"
+        )
+        .slice(-10)
+        .map((message) => ({
+          role: message.role === "user" ? "user" : "assistant",
+          content: message.text,
+        }));
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          characterName: data.characterName || "Harmai",
+          personality:
+            data.personality ||
+            data.characterPersonality ||
+            "Ramah, hangat, santai, natural, dan suka menemani pengguna ngobrol.",
+          messages: apiMessages,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal menghubungi AI.");
+      }
+
+      if (typeof result.reply !== "string" || !result.reply.trim()) {
+        throw new Error("AI belum memberikan jawaban.");
+      }
+
+      // Tampilkan balasan AI.
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "character",
+          text: result.reply.trim(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Harmai chat error:", error);
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "character",
+          text: "Maaf ya, aku lagi kesulitan membalas pesanmu. 🥹 Coba kirim pesan lagi, yuk.",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -32,9 +103,13 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
           <div className="character-avatar">
             {(data.characterName || "H").slice(0, 1).toUpperCase()}
           </div>
+
           <div className="character-details">
             <strong>{data.characterName || "Character"}</strong>
-            <span><i /> Your character</span>
+            <span>
+              <i />
+              {isLoading ? "Thinking..." : "Your character"}
+            </span>
           </div>
         </div>
 
@@ -54,7 +129,9 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`message-row ${message.role === "user" ? "user-row" : ""}`}
+            className={`message-row ${
+              message.role === "user" ? "user-row" : ""
+            }`}
           >
             {message.role === "character" && (
               <div className="message-avatar">
@@ -68,7 +145,19 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
           </div>
         ))}
 
-        {messages.length === 1 && (
+        {isLoading && (
+          <div className="message-row">
+            <div className="message-avatar">
+              {(data.characterName || "H").slice(0, 1).toUpperCase()}
+            </div>
+
+            <div className="message-bubble character">
+              Sedang mengetik...
+            </div>
+          </div>
+        )}
+
+        {messages.length === 1 && !isLoading && (
           <div className="chat-hint">
             This is the beginning of something new.
           </div>
@@ -85,10 +174,12 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
               }}
             >
               <span>▤</span>
+
               <div>
                 <strong>Buku Ingatan</strong>
                 <small>Lihat ingatan character</small>
               </div>
+
               <span className="menu-arrow">→</span>
             </button>
           </div>
@@ -110,12 +201,13 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
             onChange={(event) => setDraft(event.target.value)}
             placeholder={`Message ${data.characterName || "your character"}...`}
             aria-label="Type a message"
+            disabled={isLoading}
           />
 
           <button
             type="submit"
             className="send-button"
-            disabled={!draft.trim()}
+            disabled={!draft.trim() || isLoading}
             aria-label="Send message"
           >
             ↑
@@ -123,7 +215,7 @@ export default function Chat({ data, onOpenMemory, onEditProfile }) {
         </form>
 
         <p className="chat-disclaimer">
-          Harmai preview · Conversations are simulated
+          Harmai preview · AI-powered conversations
         </p>
       </footer>
     </main>
