@@ -1,0 +1,219 @@
+
+.onboarding-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse at 50% 0%, #33224b 0%, transparent 48%),
+    #101016;
+  padding: 24px 20px 48px;
+}
+
+.onboarding-top {
+  max-width: 900px;
+  margin: 0 auto 36px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #aaa8b8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.brand-mark.small {
+  width: 35px;
+  height: 35px;
+  margin: 0;
+  border-radius: 11px;
+  font-size: 24px;
+}
+
+.step-label {
+  margin-left: auto;
+  color: #a78bfa;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 490px;
+  margin: 0 auto;
+  padding: 34px;
+  border: 1px solid #302b3b;
+  border-radius: 25px;
+  background: #191821;
+  box-shadow: 0 25px 80px #00000030;
+}
+
+.section-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 26px;
+  border-radius: 15px;
+  color: #c4b5fd;
+  background: #302544;
+  font-size: 24px;
+}
+
+.onboarding-card .eyebrow {
+  margin-bottom: 12px;
+}
+
+.onboarding-card h1 {
+  font-size: clamp(27px, 5vw, 35px);
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.onboarding-card h1 span {
+  color: #a78bfa;
+}
+
+.form-description {
+  color: #aaa8b8;
+  font-size: 13px;
+  line-height: 1.8;
+  margin-bottom: 30px;
+}
+
+.field-label {
+  display: block;
+  margin: 20px 0 9px;
+  color: #e7e5ef;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.harmai-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 14px;
+  border: 1px solid #383444;
+  border-radius: 12px;
+  outline: none;
+  background: #121119;
+  color: #f5f3ff;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.harmai-input::placeholder {
+  color: #777485;
+}
+
+.harmai-input:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px #8b5cf620;
+}
+
+.personality-input {
+  min-height: 105px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 12px;
+  color: #c8c5d4;
+  background: #121119;
+  border: 1px solid #383444;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: 160ms ease;
+}
+
+.choice-card span {
+  color: #a78bfa;
+  font-size: 19px;
+}
+
+.choice-card:hover {
+  border-color: #75609d;
+}
+
+.choice-card.selected {
+  border-color: #9b7af7;
+  background: #302442;
+  color: white;
+  box-shadow: inset 0 0 0 1px #9b7af7;
+}
+
+.primary-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 49px;
+  margin-top: 28px;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #8b5cf6, #7044df);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 160ms, transform 160ms;
+}
+
+.primary-button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.primary-button span {
+  font-size: 18px;
+}
+
+.step-caption {
+  margin-top: 16px;
+  text-align: center;
+  color: #777485;
+  font-size: 11px;
+}
+
+.text-button {
+  display: block;
+  margin: 15px auto 0;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: #aaa8b8;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.text-button:hover {
+  color: #c4b5fd;
+}
+
+@media (max-width: 480px) {
+  .onboarding-page {
+    padding: 18px 14px 32px;
+  }
+
+  .onboarding-top {
+    margin-bottom: 24px;
+    font-size: 9px;
+  }
+
+  .onboarding-card {
+    padding: 25px 20px;
+    border-radius: 21px;
+  }
+}
