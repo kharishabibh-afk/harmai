@@ -135,14 +135,17 @@ export default function App() {
     );
   }
 
-  if (page === "memory") {
-    return (
-      <MemoryBook
-        data={data}
-        onBack={() => navigate("chat")}
-      />
-    );
-  }
+
+if (page === "memory") {
+  return (
+    <MemoryBook
+      data={data}
+      setData={setData}
+      onBack={() => navigate("chat")}
+      onOpenPersonalization={() => navigate("personalization")}
+    />
+  );
+}
 
   return <Login onLogin={() => navigate("character")} />;
 }

@@ -79,7 +79,6 @@ export default function Chat({
 
   const messagesEndRef = useRef(null);
 
-  // Simpan riwayat chat ke browser.
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(messages));
@@ -88,7 +87,6 @@ export default function Chat({
     }
   }, [messages, storageKey]);
 
-  // Gulir otomatis ke pesan terbaru.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -105,10 +103,7 @@ export default function Chat({
 
     const updatedMessages = [
       ...messages,
-      {
-        role: "user",
-        text,
-      },
+      { role: "user", text },
     ];
 
     setMessages(updatedMessages);
@@ -127,12 +122,35 @@ export default function Chat({
 
       const personalization = data.personalization || {};
 
+      const memories =
+        personalization.allowMemory === true &&
+        Array.isArray(data.memories)
+          ? data.memories
+              .filter(
+                (memory) =>
+                  memory &&
+                  typeof memory.content === "string" &&
+                  memory.content.trim()
+              )
+              .slice(0, 20)
+              .map((memory) => ({
+                content: memory.content.slice(0, 500),
+                category:
+                  typeof memory.category === "string"
+                    ? memory.category.slice(0, 50)
+                    : "lainnya",
+              }))
+          : [];
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+            characterGender: data.characterGender || "",
+            userName: data.userName || "",
+            userGender: data.userGender || "",
           characterName: data.characterName || "Harmai",
           personality:
             data.personality ||
@@ -140,6 +158,7 @@ export default function Chat({
             "Ramah, hangat, santai, natural, dan suka menemani pengguna ngobrol.",
           messages: apiMessages,
           personalization,
+          memories,
         }),
       });
 
