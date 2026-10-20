@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import Login from "./pages/Login";
 import Character from "./pages/Character";
@@ -7,19 +7,88 @@ import UserProfile from "./pages/UserProfile";
 import Chat from "./pages/Chat";
 import MemoryBook from "./pages/MemoryBook";
 
-export default function App() {
-  const [page, setPage] = useState("login");
+const STORAGE_KEY = "harmai_app_state";
 
-  const [data, setData] = useState({
-    characterName: "",
-    characterGender: "",
-    personality: "",
-    userName: "",
-    userGender: "",
-  });
+const initialData = {
+  characterName: "",
+  characterGender: "",
+  personality: "",
+  userName: "",
+  userGender: "",
+};
+
+function loadSavedState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      return {
+        page: parsed.page || "login",
+        data: { ...initialData, ...(parsed.data || {}) },
+      };
+    }
+  } catch (error) {
+    console.error("Gagal membaca data Harmai:", error);
+  }
+
+  return {
+    page: "login",
+    data: initialData,
+  };
+}
+
+export default function App() {
+  const [savedState] = useState(loadSavedState);
+
+  const [page, setPage] = useState(savedState.page);
+  const [data, setData] = useState(savedState.data);
+
+  // Simpan halaman terakhir dan data pengguna.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ page, data })
+      );
+    } catch (error) {
+      console.error("Gagal menyimpan data Harmai:", error);
+    }
+  }, [page, data]);
+
+  // Dukungan tombol Back dan Forward browser.
+  useEffect(() => {
+    window.history.replaceState({ page }, "", window.location.href);
+
+    function handlePopState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setPage(parsed.page || "login");
+          setData({ ...initialData, ...(parsed.data || {}) });
+        } catch (error) {
+          console.error("Gagal memulihkan halaman:", error);
+        }
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  function navigate(nextPage) {
+    window.history.pushState({ page: nextPage }, "", window.location.href);
+    setPage(nextPage);
+  }
 
   if (page === "login") {
-    return <Login onLogin={() => setPage("character")} />;
+    return <Login onLogin={() => navigate("character")} />;
   }
 
   if (page === "character") {
@@ -27,7 +96,7 @@ export default function App() {
       <Character
         data={data}
         setData={setData}
-        onNext={() => setPage("profile")}
+        onNext={() => navigate("profile")}
       />
     );
   }
@@ -37,7 +106,7 @@ export default function App() {
       <UserProfile
         data={data}
         setData={setData}
-        onNext={() => setPage("chat")}
+        onNext={() => navigate("chat")}
       />
     );
   }
@@ -46,8 +115,8 @@ export default function App() {
     return (
       <Chat
         data={data}
-        onOpenMemory={() => setPage("memory")}
-        onEditProfile={() => setPage("profile")}
+        onOpenMemory={() => navigate("memory")}
+        onEditProfile={() => navigate("profile")}
       />
     );
   }
@@ -56,10 +125,10 @@ export default function App() {
     return (
       <MemoryBook
         data={data}
-        onBack={() => setPage("chat")}
+        onBack={() => navigate("chat")}
       />
     );
   }
 
-  return null;
+  return <Login onLogin={() => navigate("character")} />;
 }
