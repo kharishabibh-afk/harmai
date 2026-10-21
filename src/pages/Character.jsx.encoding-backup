@@ -1,0 +1,534 @@
+﻿
+import { useRef, useState } from "react";
+import "../styles/onboarding.css";
+
+export default function Character({
+  onNext,
+  data,
+  setData,
+  editingCharacterId,
+  onCancelEdit,
+}) {
+  const isEditing = Boolean(editingCharacterId);
+  const photoInputRef = useRef(null);
+  const [aiLoadingField, setAiLoadingField] = useState("");
+  const [imageGenerating, setImageGenerating] = useState(false);
+
+  function update(field, value) {
+    setData((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  async function requestAISuggestion(field, label) {
+    if (aiLoadingField) return;
+
+    setAiLoadingField(field);
+
+    try {
+      const apiField =
+        field === "characterDescription"
+          ? "description"
+          : field === "characterInstructions"
+            ? "instructions"
+            : field === "characterImagePrompt"
+              ? "imagePrompt"
+              : field;
+
+      const response = await fetch("/api/character-assist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          field: apiField,
+          characterName: data.characterName || "",
+          characterDescription: data.characterDescription || "",
+          characterGender: data.characterGender || "",
+genderInstruction:
+  data.characterGender === "Perempuan"
+    ? "Buat karakter perempuan."
+    : data.characterGender === "Laki-laki"
+      ? "Buat karakter laki-laki."
+      : "Gender belum ditentukan.",
+          personality: data.personality || "",
+          characterSpeechStyle: data.characterSpeechStyle || "",
+          characterInstructions: data.characterInstructions || "",
+          characterImagePrompt: data.characterImagePrompt || "",
+          currentValue: data[field] || "",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "AI belum bisa membantu. Coba lagi, bro."
+        );
+      }
+
+      if (!result.suggestion) {
+        throw new Error("AI belum menghasilkan tulisan.");
+      }
+
+      setData((previous) => ({
+        ...previous,
+        [field]: result.suggestion,
+      }));
+    } catch (error) {
+      window.alert(
+        error.message || `Gagal membuat ${label} dengan AI.`
+      );
+    } finally {
+      setAiLoadingField("");
+    }
+  }
+
+
+  async function generateCharacterImage() {
+    if (imageGenerating) return;
+
+    if (!data.characterName?.trim()) {
+      window.alert("Isi nama karakter dulu, bro.");
+      return;
+    }
+
+    setImageGenerating(true);
+
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          characterName: data.characterName || "",
+          characterGender: data.characterGender || "",
+          characterDescription: data.characterDescription || "",
+          personality: data.personality || "",
+          characterSpeechStyle: data.characterSpeechStyle || "",
+          characterInstructions: data.characterInstructions || "",
+        }),
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!response.ok) {
+        let message = "Gagal membuat gambar. Coba lagi, bro.";
+
+        if (contentType.includes("application/json")) {
+          const result = await response.json();
+          message = result.error || message;
+        }
+
+        throw new Error(message);
+      }
+
+      if (!contentType.startsWith("image/")) {
+        throw new Error("AI tidak mengembalikan format gambar.");
+      }
+
+      const imageBlob = await response.blob();
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        update("characterImage", reader.result);
+      };
+
+      reader.onerror = () => {
+        window.alert("Gambar diterima, tetapi gagal ditampilkan.");
+      };
+
+      reader.readAsDataURL(imageBlob);
+    } catch (error) {
+      window.alert(
+        error.message || "Gagal membuat gambar AI, bro."
+      );
+    } finally {
+      setImageGenerating(false);
+    }
+  }
+
+  function handlePhotoUpload(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      window.alert("Pilih file gambar, bro.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 1.5 * 1024 * 1024) {
+      window.alert(
+        "Ukuran foto maksimal 1,5 MB untuk sementara. Pilih foto yang lebih kecil, ya bro."
+      );
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      update("characterImage", reader.result);
+    };
+
+    reader.onerror = () => {
+      window.alert("Foto belum berhasil dibaca. Coba pilih lagi, bro.");
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!data.characterName?.trim()) return;
+
+    onNext();
+  }
+
+  return (
+    <main className="onboarding-page">
+      <div className="onboarding-top">
+        <div className="brand-mark small">h</div>
+        <span>CREATE YOUR CHARACTER</span>
+        <span className="step-label">01 / 01</span>
+      </div>
+
+      <form className="onboarding-card" onSubmit={submit}>
+        <div className="section-icon">AI</div>
+        <p className="eyebrow">THE BEGINNING</p>
+
+        <h1>
+          {isEditing
+            ? "Edit your character."
+            : "Someone new, someone yours."}
+        </h1>
+
+        <p className="form-description">
+          Ciptakan karakter dengan identitas dan kepribadian uniknya sendiri.
+        </p>
+
+<label className="field-label">Gender</label>
+        <div className="choice-row">
+          {["Laki-laki", "Perempuan"].map((gender) => (
+            <button
+              key={gender}
+              type="button"
+              className={`choice-card ${
+                data.characterGender === gender ? "selected" : ""
+              }`}
+              onClick={() => update("characterGender", gender)}
+              aria-pressed={data.characterGender === gender}
+            >
+              <span>{gender === "Laki-laki" ? "â™‚" : "â™€"}</span>
+              {gender}
+            </button>
+          ))}
+        </div>
+
+        <section className="character-photo-section">
+          <label className="field-label">Foto karakter (opsional)</label>
+
+          <div className="character-photo-editor">
+            <div className="character-photo-preview">
+              {data.characterImage ? (
+                <img
+                  src={data.characterImage}
+                  alt={`Foto ${data.characterName || "karakter"}`}
+                />
+              ) : (
+                <div className="character-photo-placeholder">
+                  <span className="photo-placeholder-icon">AI</span>
+                  <span>Foto karakter</span>
+                </div>
+              )}
+            </div>
+
+            <div className="character-photo-actions">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handlePhotoUpload}
+              />
+
+              <button
+                className="photo-upload-button"
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+              >
+                Upload foto
+              </button>
+
+              
+<button
+  className="photo-generate-button"
+  type="button"
+  onClick={generateCharacterImage}
+  disabled={imageGenerating}
+>
+  {imageGenerating
+    ? "Sedang membuat gambar..."
+    : "AI Generate image AI"}
+</button>
+
+              {data.characterImage && (
+                <button
+                  className="photo-remove-button"
+                  type="button"
+                  onClick={() => {
+                    update("characterImage", "");
+                    if (photoInputRef.current) {
+                      photoInputRef.current.value = "";
+                    }
+                  }}
+                >
+                  Hapus foto
+                </button>
+              )}
+            </div>
+          </div>
+
+         
+          <p className="step-caption">
+            Gunakan foto sendiri atau buat gambar karakter dengan AI.
+          </p>
+
+          <label
+            className="field-label"
+            htmlFor="characterImagePrompt"
+          >
+            Prompt gambar AI (opsional)
+          </label>
+          <textarea
+            id="characterImagePrompt"
+            className="harmai-input personality-input"
+            placeholder="Contoh: Anime semi-realistis, rambut hitam panjang, mata abu-abu, pakaian hitam, ekspresi misterius, pencahayaan sinematik..."
+            value={data.characterImagePrompt || ""}
+            onChange={(event) =>
+              update("characterImagePrompt", event.target.value)
+            }
+            maxLength={1500}
+          />
+          <p className="step-caption">
+            Tulis detail visual yang kamu inginkan. Kosongkan jika ingin AI
+            menentukan tampilannya berdasarkan profil karakter.
+          </p>
+
+          <div className="character-ai-row">
+            <span className="character-ai-hint">
+              Butuh bantuan menentukan tampilan karakter?
+            </span>
+            <button
+              className="character-ai-button"
+              type="button"
+              disabled={Boolean(aiLoadingField)}
+              onClick={() =>
+                requestAISuggestion("characterImagePrompt", "prompt gambar")
+              }
+            >
+              {aiLoadingField === "characterImagePrompt"
+                ? "AI sedang menyusun prompt..."
+                : "Bantu buat prompt dengan AI"}
+            </button>
+          </div>
+
+        </section>
+
+        <label className="field-label" htmlFor="characterName">
+          Nama karakter *
+        </label>
+        <input
+          id="characterName"
+          className="harmai-input"
+          placeholder="Contoh: Raina"
+          value={data.characterName || ""}
+          onChange={(event) =>
+            update("characterName", event.target.value)
+          }
+          maxLength={40}
+          required
+        />
+
+        <label className="field-label" htmlFor="characterDescription">
+          Deskripsi karakter
+        </label>
+        <textarea
+          id="characterDescription"
+          className="harmai-input personality-input"
+          placeholder="Siapa dia? Bagaimana penampilan, latar belakang, dan kehidupannya?"
+          value={data.characterDescription || ""}
+          onChange={(event) =>
+            update("characterDescription", event.target.value)
+          }
+          maxLength={1000}
+        />
+
+        <div className="character-ai-row">
+          <span className="character-ai-hint">
+            Butuh bantuan menyusun cerita?
+          </span>
+          <button
+            className="character-ai-button"
+            type="button"
+            disabled={Boolean(aiLoadingField)}
+            onClick={() =>
+              requestAISuggestion(
+                "characterDescription",
+                "deskripsi karakter"
+              )
+            }
+          >
+            {aiLoadingField === "characterDescription"
+              ? "AI AI sedang menulis..."
+              : "AI Bantu tuliskan dengan AI"}
+          </button>
+        </div>
+
+        <label className="field-label" htmlFor="personality">
+          Kepribadian
+        </label>
+        <textarea
+          id="personality"
+          className="harmai-input personality-input"
+          placeholder="Ceritakan sifat, kebiasaan, cara berpikir, dan cara dia memperlakukan orang lain."
+          value={data.personality || ""}
+          onChange={(event) => update("personality", event.target.value)}
+          maxLength={1000}
+        />
+
+        <div className="character-ai-row">
+          <span className="character-ai-hint">
+            Kembangkan kepribadiannya
+          </span>
+          <button
+            className="character-ai-button"
+            type="button"
+            disabled={Boolean(aiLoadingField)}
+            onClick={() =>
+              requestAISuggestion("personality", "kepribadian")
+            }
+          >
+            {aiLoadingField === "personality"
+              ? "AI AI sedang menulis..."
+              : "AI Bantu tuliskan dengan AI"}
+          </button>
+        </div>
+
+        <label className="field-label" htmlFor="characterSpeechStyle">
+          Gaya bicara
+        </label>
+        <select
+          id="characterSpeechStyle"
+          className="harmai-input"
+          value={data.characterSpeechStyle || "casual"}
+          onChange={(event) =>
+            update("characterSpeechStyle", event.target.value)
+          }
+        >
+          <option value="casual">Santai dan natural</option>
+          <option value="formal">Formal dan sopan</option>
+          <option value="manja">Manja dan hangat</option>
+          <option value="dingin">Dingin dan pendiam</option>
+          <option value="puitis">Puitis dan metaforis</option>
+        </select>
+
+        <label className="field-label" htmlFor="characterResponseLength">
+          Panjang balasan
+        </label>
+        <select
+          id="characterResponseLength"
+          className="harmai-input"
+          value={data.characterResponseLength || "medium"}
+          onChange={(event) =>
+            update("characterResponseLength", event.target.value)
+          }
+        >
+          <option value="short">Pendek â€” 1â€“2 kalimat</option>
+          <option value="medium">Sedang â€” beberapa kalimat</option>
+          <option value="long">Panjang â€” lebih detail</option>
+        </select>
+
+        <label className="field-label" htmlFor="characterInstructions">
+          Instruksi tambahan (opsional)
+        </label>
+        <textarea
+          id="characterInstructions"
+          className="harmai-input personality-input"
+          placeholder="Contoh: Jangan terlalu cepat akrab. Gunakan humor tipis dan ingat detail percakapan."
+          value={data.characterInstructions || ""}
+          onChange={(event) =>
+            update("characterInstructions", event.target.value)
+          }
+          maxLength={1500}
+        />
+
+        <div className="character-ai-row">
+          <span className="character-ai-hint">
+            Punya aturan khusus untuk karakter?
+          </span>
+          <button
+            className="character-ai-button"
+            type="button"
+            disabled={Boolean(aiLoadingField)}
+            onClick={() =>
+              requestAISuggestion(
+                "characterInstructions",
+                "instruksi tambahan"
+              )
+            }
+          >
+            {aiLoadingField === "characterInstructions"
+              ? "AI AI sedang menulis..."
+              : "AI Bantu tuliskan dengan AI"}
+          </button>
+        </div>
+
+        <label className="field-label" htmlFor="characterVisibility">
+          Visibilitas karakter
+        </label>
+        <select
+          id="characterVisibility"
+          className="harmai-input"
+          value={data.characterVisibility || "private"}
+          onChange={(event) =>
+            update("characterVisibility", event.target.value)
+          }
+        >
+          <option value="private">Privat â€” hanya untuk saya</option>
+          <option value="public">
+            Publik â€” boleh ditemukan pengguna lain
+          </option>
+        </select>
+
+        <button className="primary-button" type="submit">
+          {isEditing ? "Simpan Perubahan" : "Simpan dan lanjut ke Chat"}{" "}
+          <span>â†’</span>
+        </button>
+
+        {isEditing && (
+          <button
+            className="primary-button"
+            type="button"
+            onClick={onCancelEdit}
+          >
+            Batal
+          </button>
+        )}
+
+        <p className="step-caption">
+          Kamu bisa menyempurnakan karaktermu nanti.
+        </p>
+      </form>
+    </main>
+  );
+}
+
+
+
+

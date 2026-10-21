@@ -202,7 +202,7 @@
 .message-bubble {
   width: fit-content;
   max-width: min(76%, 590px);
-  min-width: max-content;
+  min-width: fit-content;
   padding: 13px 16px;
   border: 1px solid transparent;
   border-radius: 18px;
@@ -275,7 +275,7 @@
 .chat-composer input {
   flex: 1;
   width: 0;
-  min-width: 0;
+  min-width: fit-content;
   padding: 11px 4px;
   border: none;
   outline: none;
