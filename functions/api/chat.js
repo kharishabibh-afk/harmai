@@ -1,4 +1,4 @@
-
+﻿
 export async function onRequestPost({ request, env }) {
   try {
     if (!env.AI) {
@@ -229,7 +229,7 @@ const styleInstructions = {
       .join("\n\n");
 
     const result = await env.AI.run(
-      "@cf/zai-org/glm-4.7-flash",
+      "@cf/meta/llama-3.1-8b-instruct-fast",
       {
         messages: [
           { role: "system", content: systemPrompt },
@@ -270,3 +270,4 @@ const styleInstructions = {
     );
   }
 }
+
